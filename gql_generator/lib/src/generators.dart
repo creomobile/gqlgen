@@ -112,11 +112,12 @@ class $name extends ObjectBase$mixins {
   static String createExtensions(List<Type> interfaces, List<Type> objects) {
     var res = _header('Extensions');
 
-    String createExtension(String name) => '$name as$name() => $name(this);\n';
+    String createExtension(String name, [String prefix = '']) =>
+        '$name as$name() => $prefix$name(this);\n';
 
     res += '''
 extension GqlExtension on Map<String, dynamic> {
-  ${interfaces.map((_) => createExtension('_' + _.name)).join()}
+  ${interfaces.map((_) => createExtension(_.name, '_')).join()}
   ${objects.map((_) => createExtension(_.name)).join()}
 }
 ''';
