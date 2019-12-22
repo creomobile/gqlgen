@@ -146,7 +146,8 @@ extension GqlExtension on Map<String, dynamic> {
       final constStr = mixins.isEmpty ? 'const ' : '';
       res += '''
 class $name extends ObjectBase$mixins {
-  $constStr$name() : super($constStr<String, dynamic>{});
+  $constStr$name(Map<String, dynamic> json) : super(json);
+  $constStr$name.create() : super($constStr<String, dynamic>{});
 
   ${_createFields(type.inputFields, knownTypes, customTypes, interfaceFields)}
 }
@@ -181,6 +182,7 @@ class $name extends ObjectBase$mixins {
       case Kind.enum_:
         return type.name;
       case Kind.object:
+      case Kind.inputObject:
       case Kind.interface:
         return knownTypes.containsKey(type.name) ? type.name : 'dynamic';
       default:
@@ -199,6 +201,7 @@ class $name extends ObjectBase$mixins {
             '${_getGetter('_', type.ofType, knownTypes, customTypes)})';
       case Kind.enum_:
       case Kind.object:
+      case Kind.inputObject:
         return '${type.name}($data)';
       case Kind.interface:
         return '_${type.name}($data)';
@@ -220,6 +223,7 @@ class $name extends ObjectBase$mixins {
       case Kind.enum_:
         return '$data.toString()';
       case Kind.object:
+      case Kind.inputObject:
       case Kind.interface:
         return '$data.json';
       default:

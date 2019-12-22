@@ -35,6 +35,7 @@ class GraphQLGenerator extends GeneratorForAnnotation<GraphQLSource> {
       ...kindMap[Kind.enum_],
       ...kindMap[Kind.interface],
       ...kindMap[Kind.object],
+      ...kindMap[Kind.inputObject],
     ], key: (_) => _.name);
 
     return Generators.createBase() +
