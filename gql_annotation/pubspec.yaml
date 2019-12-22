@@ -1,0 +1,12 @@
+name: gql_annotation
+description: GraphQL generation annotation
+version: 0.0.1
+author: LA Developers
+homepage: https://www.ladevelopers.com/
+
+environment:
+  sdk: ">=2.6.0 <3.0.0"
+
+dependencies:
+
+dev_dependencies:

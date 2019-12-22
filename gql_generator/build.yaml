@@ -1,0 +1,15 @@
+targets:
+  $default:
+    builders:
+      graphql_generator|graphql_generator:
+        enabled: true
+
+builders:
+  graphql_generator:
+    target: ":gql_generator"
+    import: "package:gql_generator/builder.dart"
+    builder_factories: ["createBuilder"]
+    build_extensions: {".dart": [".gql.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]
