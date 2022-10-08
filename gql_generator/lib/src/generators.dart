@@ -3,25 +3,25 @@
 // import 'package:source_gen/source_gen.dart';
 
 class Generators {
-  static const keywords = {'true', 'false'};
+  static const keywords = {
+    'true',
+    'false',
+    'default',
+    'int',
+    'float',
+    'string',
+    'bool'
+  };
 
   static String _header(String header) => '\n// --- $header\n\n';
 
-  static String createBase() {
-    return '''
-${_header('Base')}
-abstract class ObjectBase {
-  const ObjectBase(this.json);
-  final Map<String, dynamic> json;
-}
-''';
-  }
-
-  static String createEnums(List<Type> types) {
+  static String createEnums(List<Type> types, Set<String> customTypes) {
     var res = _header('Enums');
 
     types.forEach((type) {
       final name = type.name;
+      if (customTypes.contains(name)) return;
+
       final valueNames = type.enumValues.map((_) => _.name).toList();
       final valuesMap =
           Map<String, String>.fromIterables(valueNames, valueNames.map((_) {
@@ -34,9 +34,10 @@ abstract class ObjectBase {
           .map((_) => 'static const ${_.value} = $name._(\'${_.key}\');')
           .join();
 
-      res += '''
+      res +=
+          '''
 class $name {
-  factory $name(String value) => _map[value];
+  factory $name(String value) => _map[value]!;
   const $name._(this._value);
   final String _value;
   static const _map = {$mapTxt};
@@ -57,19 +58,20 @@ class $name {
     return res;
   }
 
-  static String createInterfaces(
-      List<Type> types, Map<String, Type> knownTypes, Set<String> customTypes) {
+  static String createInterfaces(String baseName, List<Type> types,
+      Map<String, Type> knownTypes, Set<String> customTypes) {
     var res = _header('Interfaces');
 
     types.forEach((type) {
       final name = type.name;
       final interfaceFields = <String>{};
-      res += '''
-mixin $name on ObjectBase {
+      res +=
+          '''
+mixin $name on $baseName {
   ${_createFields(type.fields, knownTypes, customTypes, interfaceFields)}
 }
 
-class _$name extends ObjectBase with $name {
+class _$name extends $baseName with $name {
   _$name(Map<String, dynamic> json) : super(json);
 }
 ''';
@@ -78,12 +80,13 @@ class _$name extends ObjectBase with $name {
     return res;
   }
 
-  static String createObjects(
-      List<Type> types, Map<String, Type> knownTypes, Set<String> customTypes) {
+  static String createObjects(String baseName, List<Type> types,
+      Map<String, Type> knownTypes, Set<String> customTypes) {
     var res = _header('Objects');
 
     types.forEach((type) {
       final name = type.name;
+      if (customTypes.contains(name)) return;
       final interfaces = type.interfaces
               ?.map((_) => knownTypes[_.name])
               ?.where((_) => _ != null)
@@ -97,8 +100,9 @@ class _$name extends ObjectBase with $name {
       final mixins = interfaces.isEmpty
           ? ''
           : ' with ' + interfaces.map((_) => _.name).join(',');
-      res += '''
-class $name extends ObjectBase$mixins {
+      res +=
+          '''
+class $name extends $baseName$mixins {
   ${mixins.isEmpty ? 'const ' : ''}$name(Map<String, dynamic> json) : super(json);
 
   ${_createFields(type.fields, knownTypes, customTypes, interfaceFields)}
@@ -115,7 +119,8 @@ class $name extends ObjectBase$mixins {
     String createExtension(String name, [String prefix = '']) =>
         '$name as$name() => $prefix$name(this);\n';
 
-    res += '''
+    res +=
+        '''
 extension GqlExtension on Map<String, dynamic> {
   ${interfaces.map((_) => createExtension(_.name, '_')).join()}
   ${objects.map((_) => createExtension(_.name)).join()}
@@ -125,8 +130,8 @@ extension GqlExtension on Map<String, dynamic> {
     return res;
   }
 
-  static String createInputObjects(
-      List<Type> types, Map<String, Type> knownTypes, Set<String> customTypes) {
+  static String createInputObjects(String baseName, List<Type> types,
+      Map<String, Type> knownTypes, Set<String> customTypes) {
     var res = _header('Input Objects');
 
     types.forEach((type) {
@@ -145,8 +150,9 @@ extension GqlExtension on Map<String, dynamic> {
           ? ''
           : ' with ' + interfaces.map((_) => _.name).join(',');
       final constStr = mixins.isEmpty ? 'const ' : '';
-      res += '''
-class $name extends ObjectBase$mixins {
+      res +=
+          '''
+class $name extends $baseName$mixins {
   $constStr$name(Map<String, dynamic> json) : super(json);
   $constStr$name.create() : super($constStr<String, dynamic>{});
 
@@ -240,6 +246,7 @@ class $name extends ObjectBase$mixins {
     return fields.where((_) => !interfaceFields.contains(_.name)).map((field) {
       final name = field.name;
       final camel = name.toCamelCase();
+      var fixedName = keywords.contains(camel) ? camel + '_' : camel;
       final comment = field.description?.isNotEmpty == true
           ? field.description.split('\n').map((_) => '/// ${_.trim()}\n').join()
           : '';
@@ -250,10 +257,10 @@ class $name extends ObjectBase$mixins {
       final getter =
           _getGetter('json[\'$name\']', field.type, knownTypes, customTypes);
       final completeGetter =
-          '$comment$deprecated$type get $camel => $getter;\n';
+          '$comment$deprecated$type get $fixedName => $getter;\n';
       final setter = _getSetter('value', field.type, knownTypes, customTypes);
       final completeSetter =
-          'set $camel($type value) => json[\'$name\'] = $setter;\n';
+          'set $fixedName($type value) => json[\'$name\'] = $setter;\n';
 
       return completeGetter + completeSetter;
     }).join();
@@ -402,7 +409,8 @@ Kind getKind(String kind) {
   }
 }
 
-const String query = r'''
+const String query =
+    r'''
 query IntrospectionQuery {
       __schema {
         types {

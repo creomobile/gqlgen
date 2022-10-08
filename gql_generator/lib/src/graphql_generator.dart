@@ -14,6 +14,13 @@ class GraphQLGenerator extends GeneratorForAnnotation<GraphQLSource> {
   @override
   FutureOr<String> generateForAnnotatedElement(
       Element element, ConstantReader annotation, BuildStep buildStep) async {
+    final baseName = element.name;
+    if (element is! ClassElement) {
+      throw InvalidGenerationSourceError('Generator cannot target `$baseName`.',
+          todo: 'Remove the GraphQLSource annotation from `$baseName`.',
+          element: element);
+    }
+
     final url = annotation.read('url').stringValue;
     final customTypes = annotation.read('customTypes').isNull
         ? <String>{}
@@ -22,7 +29,7 @@ class GraphQLGenerator extends GeneratorForAnnotation<GraphQLSource> {
             .listValue
             .map((_) => _.toStringValue())
             .toSet();
-    final response = await http.post(url,
+    final response = await http.post(Uri.parse(url),
         headers: {'content-type': 'application/json'},
         body: json.encode({'query': query}));
     final types =
@@ -38,15 +45,14 @@ class GraphQLGenerator extends GeneratorForAnnotation<GraphQLSource> {
       ...kindMap[Kind.inputObject],
     ], key: (_) => _.name);
 
-    return Generators.createBase() +
-        Generators.createEnums(kindMap[Kind.enum_]) +
+    return Generators.createEnums(kindMap[Kind.enum_], customTypes) +
         Generators.createInterfaces(
-            kindMap[Kind.interface], knownTypes, customTypes) +
+            baseName, kindMap[Kind.interface], knownTypes, customTypes) +
         Generators.createObjects(
-            kindMap[Kind.object], knownTypes, customTypes) +
+            baseName, kindMap[Kind.object], knownTypes, customTypes) +
         Generators.createExtensions(
             kindMap[Kind.interface], kindMap[Kind.object]) +
         Generators.createInputObjects(
-            kindMap[Kind.inputObject], knownTypes, customTypes);
+            baseName, kindMap[Kind.inputObject], knownTypes, customTypes);
   }
 }
