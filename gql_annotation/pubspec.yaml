@@ -3,8 +3,4 @@ description: Graph QL generation annotation
 version: 0.0.2
 
 environment:
-  sdk: ">=2.6.0 <3.0.0"
-
-dependencies:
-
-dev_dependencies:
+  sdk: '>=2.18.2 <3.0.0'
