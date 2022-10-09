@@ -75,6 +75,7 @@ class $enumName {
       final name = type.name;
       final interfaceFields = <String>{};
       res += '''
+${type.description?.isNotEmpty == true ? '/// ${type.description}' : ''}
 mixin $name on $baseName {
   ${_createFields(type.fields, knownTypes, customTypes, interfaceFields)}
 }
@@ -109,6 +110,7 @@ class _$name extends $baseName with $name {
           ? ''
           : ' with ' + interfaces.map((_) => _.name).join(',');
       res += '''
+${type.description?.isNotEmpty == true ? '/// ${type.description}' : ''}
 class $name extends $baseName$mixins {
   ${mixins.isEmpty ? 'const ' : ''}$name(Map<String, dynamic> json) : super(json);
 
