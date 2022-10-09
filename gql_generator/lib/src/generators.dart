@@ -44,6 +44,7 @@ class Generators {
       });
 
       res += '''
+${type.description?.isNotEmpty == true ? '/// ${type.description}' : ''}
 class $enumName {
   factory $enumName(String value) => _map[value]!;
   const $enumName._(this._value);
