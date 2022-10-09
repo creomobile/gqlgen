@@ -19,35 +19,44 @@ class Generators {
     var res = _header('Enums');
 
     types.forEach((type) {
-      final name = type.name;
-      if (customTypes.contains(name)) return;
+      final enumName = type.name;
+      if (customTypes.contains(enumName)) return;
 
-      final valueNames = type.enumValues.map((_) => _.name).toList();
-      final valuesMap =
-          Map<String, String>.fromIterables(valueNames, valueNames.map((_) {
-        final res = _.toCamelCase();
-        return keywords.contains(res) ? res + '_' : res;
-      }));
-      final mapTxt =
-          valuesMap.entries.map((_) => '\'${_.key}\':${_.value}').join(',');
-      final constsTxt = valuesMap.entries
-          .map((_) => 'static const ${_.value} = $name._(\'${_.key}\');')
-          .join();
+      final mapTxts = <String>[];
+      final constTxts = <String>[];
+
+      type.enumValues.forEach((enumValue) {
+        final name = enumValue.name;
+        var preparedName = name.toCamelCase();
+        if (keywords.contains(preparedName)) preparedName += '_';
+        mapTxts.add('\'${name}\':${preparedName}');
+
+        var constValue =
+            'static const ${preparedName} = $enumName._(\'${name}\');';
+
+        final description = enumValue.description;
+
+        if (description?.isNotEmpty == true) {
+          constValue = '/// ${description}\n' + constValue;
+        }
+
+        constTxts.add(constValue);
+      });
 
       res += '''
-class $name {
-  factory $name(String value) => _map[value]!;
-  const $name._(this._value);
+class $enumName {
+  factory $enumName(String value) => _map[value]!;
+  const $enumName._(this._value);
   final String _value;
-  static const _map = {$mapTxt};
+  static const _map = {${mapTxts.join(',')}};
 
-  $constsTxt
+  ${constTxts.join()}
 
   @override
   String toString() => _value;
 
   @override
-  bool operator ==(other) => other is $name && _value == other._value;
+  bool operator ==(other) => other is $enumName && _value == other._value;
   @override
   int get hashCode => _value.hashCode;
 }
@@ -350,7 +359,7 @@ class Field extends FieldBase {
   Field(Map<String, dynamic> map) : super(map);
   Iterable<Arg> get args => (map['args'] as List?)?.map((_) => Arg(_)) ?? [];
   bool get isDeprecated => map['isDeprecated'];
-  String get deprecationReason => map['deprecationReason'];
+  String? get deprecationReason => map['deprecationReason'];
 }
 
 class InputField extends FieldBase {
