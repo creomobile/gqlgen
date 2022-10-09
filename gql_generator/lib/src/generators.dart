@@ -34,8 +34,7 @@ class Generators {
           .map((_) => 'static const ${_.value} = $name._(\'${_.key}\');')
           .join();
 
-      res +=
-          '''
+      res += '''
 class $name {
   factory $name(String value) => _map[value]!;
   const $name._(this._value);
@@ -48,7 +47,7 @@ class $name {
   String toString() => _value;
 
   @override
-  bool operator ==(_) => _ is $name && _value == _._value;
+  bool operator ==(other) => other is $name && _value == other._value;
   @override
   int get hashCode => _value.hashCode;
 }
@@ -65,8 +64,7 @@ class $name {
     types.forEach((type) {
       final name = type.name;
       final interfaceFields = <String>{};
-      res +=
-          '''
+      res += '''
 mixin $name on $baseName {
   ${_createFields(type.fields, knownTypes, customTypes, interfaceFields)}
 }
@@ -88,10 +86,10 @@ class _$name extends $baseName with $name {
       final name = type.name;
       if (customTypes.contains(name)) return;
       final interfaces = type.interfaces
-              ?.map((_) => knownTypes[_.name])
-              ?.where((_) => _ != null)
-              ?.toList() ??
-          [];
+          .map((_) => knownTypes[_.name])
+          .where((_) => _ != null)
+          .cast<Type>()
+          .toList();
       final interfaceFields = interfaces
           .map((_) => _.fields)
           .expand((_) => _)
@@ -100,8 +98,7 @@ class _$name extends $baseName with $name {
       final mixins = interfaces.isEmpty
           ? ''
           : ' with ' + interfaces.map((_) => _.name).join(',');
-      res +=
-          '''
+      res += '''
 class $name extends $baseName$mixins {
   ${mixins.isEmpty ? 'const ' : ''}$name(Map<String, dynamic> json) : super(json);
 
@@ -119,8 +116,7 @@ class $name extends $baseName$mixins {
     String createExtension(String name, [String prefix = '']) =>
         '$name as$name() => $prefix$name(this);\n';
 
-    res +=
-        '''
+    res += '''
 extension GqlExtension on Map<String, dynamic> {
   ${interfaces.map((_) => createExtension(_.name, '_')).join()}
   ${objects.map((_) => createExtension(_.name)).join()}
@@ -137,10 +133,10 @@ extension GqlExtension on Map<String, dynamic> {
     types.forEach((type) {
       final name = type.name;
       final interfaces = type.interfaces
-              ?.map((_) => knownTypes[_.name])
-              ?.where((_) => _ != null)
-              ?.toList() ??
-          [];
+          .map((_) => knownTypes[_.name])
+          .where((_) => _ != null)
+          .cast<Type>()
+          .toList();
       final interfaceFields = interfaces
           .map((_) => _.fields)
           .expand((_) => _)
@@ -150,8 +146,7 @@ extension GqlExtension on Map<String, dynamic> {
           ? ''
           : ' with ' + interfaces.map((_) => _.name).join(',');
       final constStr = mixins.isEmpty ? 'const ' : '';
-      res +=
-          '''
+      res += '''
 class $name extends $baseName$mixins {
   $constStr$name(Map<String, dynamic> json) : super(json);
   $constStr$name.create() : super($constStr<String, dynamic>{});
@@ -166,7 +161,7 @@ class $name extends $baseName$mixins {
 
   static String _getType(
       FieldType type, Map<String, Type> knownTypes, Set<String> customTypes) {
-    if (customTypes.contains(type.name)) return type.name;
+    if (customTypes.contains(type.name)) return type.name!;
     switch (type.kind) {
       case Kind.nonNull:
         return _getType(type.ofType, knownTypes, customTypes);
@@ -187,11 +182,11 @@ class $name extends $baseName$mixins {
         }
         return 'dynamic';
       case Kind.enum_:
-        return type.name;
+        return type.name!;
       case Kind.object:
       case Kind.inputObject:
       case Kind.interface:
-        return knownTypes.containsKey(type.name) ? type.name : 'dynamic';
+        return knownTypes.containsKey(type.name ?? '') ? type.name! : 'dynamic';
       default:
         return 'dynamic';
     }
@@ -248,10 +243,13 @@ class $name extends $baseName$mixins {
       final camel = name.toCamelCase();
       var fixedName = keywords.contains(camel) ? camel + '_' : camel;
       final comment = field.description?.isNotEmpty == true
-          ? field.description.split('\n').map((_) => '/// ${_.trim()}\n').join()
+          ? field.description!
+              .split('\n')
+              .map((_) => '/// ${_.trim()}\n')
+              .join()
           : '';
       final deprecated = field is Field && field.isDeprecated
-          ? '@Deprecated(\'${field.deprecationReason ?? ''}\')\n'
+          ? '@Deprecated(\'${field.deprecationReason}\')\n'
           : '';
       final type = _getType(field.type, knownTypes, customTypes);
       final getter =
@@ -270,10 +268,10 @@ class $name extends $baseName$mixins {
 // extensions
 
 extension StringExtentions on String {
-  String capitalize() => this?.isNotEmpty != true
+  String capitalize() => this.isNotEmpty != true
       ? this
       : this[0].toUpperCase() + this.substring(1);
-  String uncapitalize() => this?.isNotEmpty != true
+  String uncapitalize() => this.isNotEmpty != true
       ? this
       : this[0].toLowerCase() + this.substring(1);
   bool isUppercase() => !this
@@ -318,7 +316,7 @@ abstract class Adapter {
   final Map<String, dynamic> map;
 
   String get name => map['name'];
-  String get description => map['description'];
+  String? get description => map['description'];
 }
 
 class Type extends Adapter {
@@ -326,15 +324,15 @@ class Type extends Adapter {
 
   Kind get kind => getKind(map['kind']);
   Iterable<Field> get fields =>
-      (map['fields'] as List)?.map((_) => Field(_)) ?? [];
+      (map['fields'] as List?)?.map((_) => Field(_)) ?? [];
   Iterable<InputField> get inputFields =>
-      (map['inputFields'] as List)?.map((_) => InputField(_)) ?? [];
+      (map['inputFields'] as List?)?.map((_) => InputField(_)) ?? [];
   Iterable<FieldType> get interfaces =>
-      (map['interfaces'] as List)?.map((_) => FieldType(_)) ?? [];
+      (map['interfaces'] as List?)?.map((_) => FieldType(_)) ?? [];
   Iterable<EnumValue> get enumValues =>
-      (map['enumValues'] as List)?.map((_) => EnumValue(_)) ?? [];
+      (map['enumValues'] as List?)?.map((_) => EnumValue(_)) ?? [];
   Iterable<FieldType> get possibleTypes =>
-      (map['possibleTypes'] as List)?.map((_) => FieldType(_)) ?? [];
+      (map['possibleTypes'] as List?)?.map((_) => FieldType(_)) ?? [];
 }
 
 class EnumValue extends Adapter {
@@ -350,7 +348,7 @@ class FieldBase extends Adapter {
 
 class Field extends FieldBase {
   Field(Map<String, dynamic> map) : super(map);
-  Iterable<Arg> get args => (map['args'] as List)?.map((_) => Arg(_)) ?? [];
+  Iterable<Arg> get args => (map['args'] as List?)?.map((_) => Arg(_)) ?? [];
   bool get isDeprecated => map['isDeprecated'];
   String get deprecationReason => map['deprecationReason'];
 }
@@ -370,7 +368,7 @@ class FieldType {
   FieldType(this.map);
   final Map<String, dynamic> map;
   Kind get kind => getKind(map['kind']);
-  String get name => map['name'];
+  String? get name => map['name'];
   FieldType get ofType => FieldType(map['ofType']);
 }
 
@@ -409,8 +407,7 @@ Kind getKind(String kind) {
   }
 }
 
-const String query =
-    r'''
+const String query = r'''
 query IntrospectionQuery {
       __schema {
         types {

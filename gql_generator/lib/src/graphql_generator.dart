@@ -9,12 +9,12 @@ import 'package:http/http.dart' as http;
 import 'package:source_gen/source_gen.dart';
 
 class GraphQLGenerator extends GeneratorForAnnotation<GraphQLSource> {
-  bool isSystem(String name) => name?.startsWith('__');
+  bool isSystem(String name) => name.startsWith('__');
 
   @override
   FutureOr<String> generateForAnnotatedElement(
       Element element, ConstantReader annotation, BuildStep buildStep) async {
-    final baseName = element.name;
+    final baseName = element.name!;
     if (element is! ClassElement) {
       throw InvalidGenerationSourceError('Generator cannot target `$baseName`.',
           todo: 'Remove the GraphQLSource annotation from `$baseName`.',
@@ -27,7 +27,7 @@ class GraphQLGenerator extends GeneratorForAnnotation<GraphQLSource> {
         : annotation
             .read('customTypes')
             .listValue
-            .map((_) => _.toStringValue())
+            .map((_) => _.toStringValue()!)
             .toSet();
     final response = await http.post(Uri.parse(url),
         headers: {'content-type': 'application/json'},
@@ -39,20 +39,20 @@ class GraphQLGenerator extends GeneratorForAnnotation<GraphQLSource> {
     final kindMap = <Kind, List<Type>>{};
     types.forEach((_) => (kindMap[_.kind] ??= <Type>[]).add(_));
     final knownTypes = Map<String, Type>.fromIterable([
-      ...kindMap[Kind.enum_],
-      ...kindMap[Kind.interface],
-      ...kindMap[Kind.object],
-      ...kindMap[Kind.inputObject],
+      ...kindMap[Kind.enum_] ?? [],
+      ...kindMap[Kind.interface] ?? [],
+      ...kindMap[Kind.object] ?? [],
+      ...kindMap[Kind.inputObject] ?? [],
     ], key: (_) => _.name);
 
-    return Generators.createEnums(kindMap[Kind.enum_], customTypes) +
+    return Generators.createEnums(kindMap[Kind.enum_] ?? [], customTypes) +
         Generators.createInterfaces(
-            baseName, kindMap[Kind.interface], knownTypes, customTypes) +
+            baseName, kindMap[Kind.interface] ?? [], knownTypes, customTypes) +
         Generators.createObjects(
-            baseName, kindMap[Kind.object], knownTypes, customTypes) +
+            baseName, kindMap[Kind.object] ?? [], knownTypes, customTypes) +
         Generators.createExtensions(
-            kindMap[Kind.interface], kindMap[Kind.object]) +
+            kindMap[Kind.interface] ?? [], kindMap[Kind.object] ?? []) +
         Generators.createInputObjects(
-            baseName, kindMap[Kind.inputObject], knownTypes, customTypes);
+            baseName, kindMap[Kind.inputObject] ?? [], knownTypes, customTypes);
   }
 }
