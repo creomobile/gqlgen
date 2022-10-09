@@ -159,6 +159,7 @@ extension GqlExtension on Map<String, dynamic> {
           : ' with ' + interfaces.map((_) => _.name).join(',');
       final constStr = mixins.isEmpty ? 'const ' : '';
       res += '''
+${type.description?.isNotEmpty == true ? '/// ${type.description}' : ''}
 class $name extends $baseName$mixins {
   $constStr$name(Map<String, dynamic> json) : super(json);
   $constStr$name.create() : super($constStr<String, dynamic>{});
