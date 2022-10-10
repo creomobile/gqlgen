@@ -45,7 +45,8 @@ class GraphQLGenerator extends GeneratorForAnnotation<GraphQLSource> {
       ...kindMap[Kind.inputObject] ?? [],
     ], key: (_) => _.name);
 
-    return Generators.createEnums(kindMap[Kind.enum_] ?? [], customTypes) +
+    final result = Generators.createEnums(
+            kindMap[Kind.enum_] ?? [], customTypes) +
         Generators.createInterfaces(
             baseName, kindMap[Kind.interface] ?? [], knownTypes, customTypes) +
         Generators.createObjects(
@@ -54,5 +55,7 @@ class GraphQLGenerator extends GeneratorForAnnotation<GraphQLSource> {
             kindMap[Kind.interface] ?? [], kindMap[Kind.object] ?? []) +
         Generators.createInputObjects(
             baseName, kindMap[Kind.inputObject] ?? [], knownTypes, customTypes);
+
+    return result;
   }
 }

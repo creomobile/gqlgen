@@ -173,74 +173,107 @@ class $name extends $baseName$mixins {
   }
 
   static String _getType(
-      FieldType type, Map<String, Type> knownTypes, Set<String> customTypes) {
-    if (customTypes.contains(type.name)) return type.name!;
-    switch (type.kind) {
-      case Kind.nonNull:
-        return _getType(type.ofType, knownTypes, customTypes);
-      case Kind.list:
-        return 'Iterable<${_getType(type.ofType, knownTypes, customTypes)}>';
-      case Kind.scalar:
-        switch (type.name) {
-          case 'String':
-            return 'String';
-          case 'Boolean':
-            return 'bool';
-          case 'Int':
-            return 'int';
-          case 'DateTime':
-            return 'DateTime';
-          case 'Float':
-            return 'double';
-        }
-        return 'dynamic';
-      case Kind.enum_:
-        return type.name!;
-      case Kind.object:
-      case Kind.inputObject:
-      case Kind.interface:
-        return knownTypes.containsKey(type.name ?? '') ? type.name! : 'dynamic';
-      default:
-        return 'dynamic';
+      FieldType type, Map<String, Type> knownTypes, Set<String> customTypes,
+      [bool isNullable = true]) {
+    String result;
+
+    if (customTypes.contains(type.name)) {
+      result = type.name!;
+    } else {
+      switch (type.kind) {
+        case Kind.nonNull:
+          result = _getType(
+              type.ofType, knownTypes, customTypes, isNullable = false);
+          break;
+        case Kind.list:
+          result =
+              'Iterable<${_getType(type.ofType, knownTypes, customTypes)}>';
+          break;
+        case Kind.scalar:
+          switch (type.name) {
+            case 'String':
+              result = 'String';
+              break;
+            case 'Boolean':
+              result = 'bool';
+              break;
+            case 'Int':
+              result = 'int';
+              break;
+            case 'DateTime':
+              result = 'DateTime';
+              break;
+            case 'Float':
+              result = 'double';
+              break;
+            default:
+              result = 'dynamic';
+              break;
+          }
+          break;
+        case Kind.enum_:
+          result = type.name!;
+          break;
+        case Kind.object:
+        case Kind.inputObject:
+        case Kind.interface:
+          result =
+              knownTypes.containsKey(type.name ?? '') ? type.name! : 'dynamic';
+          break;
+        default:
+          result = 'dynamic';
+          break;
+      }
     }
+
+    if (isNullable && result != 'dynamic') result += '?';
+    return result;
   }
 
   static String _getGetter(String data, FieldType type,
-      Map<String, Type> knownTypes, Set<String> customTypes) {
+      Map<String, Type> knownTypes, Set<String> customTypes,
+      [bool isNullable = true]) {
     if (customTypes.contains(type.name)) return '${type.name}($data)';
     switch (type.kind) {
       case Kind.nonNull:
-        return _getGetter(data, type.ofType, knownTypes, customTypes);
+        return _getGetter(
+            data, type.ofType, knownTypes, customTypes, isNullable = false);
       case Kind.list:
-        return '($data as List).map((_) => '
+        final getter = '($data as List).map((_) => '
             '${_getGetter('_', type.ofType, knownTypes, customTypes)})';
+        return isNullable ? '$data == null ? null : $getter' : '$getter';
       case Kind.enum_:
       case Kind.object:
       case Kind.inputObject:
-        return '${type.name}($data)';
+        final getter = '${type.name}($data)';
+        return isNullable ? '$data == null ? null : $getter' : '$getter';
       case Kind.interface:
-        return '_${type.name}($data)';
+        final getter = '_${type.name}($data)';
+        return isNullable ? '$data == null ? null : $getter' : '$getter';
       default:
         return data;
     }
   }
 
   static String _getSetter(String data, FieldType type,
-      Map<String, Type> knownTypes, Set<String> customTypes) {
-    if (customTypes.contains(type.name)) return '$data.json';
+      Map<String, Type> knownTypes, Set<String> customTypes,
+      [bool isNullable = true]) {
+    if (customTypes.contains(type.name))
+      return isNullable ? '$data?.json' : '$data.json';
     switch (type.kind) {
       case Kind.nonNull:
-        return _getSetter(data, type.ofType, knownTypes, customTypes);
+        return _getSetter(
+            data, type.ofType, knownTypes, customTypes, isNullable = false);
       case Kind.list:
-        return '$data.map((_) => '
+        return '$data${isNullable ? '?' : ''}.map((_) => '
             '${_getSetter('_', type.ofType, knownTypes, customTypes)})'
             '.toList()';
       case Kind.enum_:
-        return '$data.toString()';
+        return isNullable ? '$data?.toString()' : '$data.toString()';
       case Kind.object:
       case Kind.inputObject:
       case Kind.interface:
-        return '$data.json';
+        return isNullable ? '$data?.json' : '$data.json';
       default:
         return data;
     }
