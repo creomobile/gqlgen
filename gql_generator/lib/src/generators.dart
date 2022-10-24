@@ -10,7 +10,9 @@ class Generators {
     'int',
     'float',
     'string',
-    'bool'
+    'bool',
+    'null',
+    'in',
   };
 
   static String _header(String header) => '\n// --- $header\n\n';
